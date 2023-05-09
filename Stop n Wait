@@ -1,0 +1,70 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdbool.h>
+#include <unistd.h>
+
+#define TIMEOUT 1
+
+// Simulated network layer
+bool networkLayer(int packet) {
+    // Simulate packet loss
+    if (rand() % 10 < 3) {
+        printf("Packet %d lost\n", packet);
+        return false;
+    }
+    printf("Packet %d received\n", packet);
+    return true;
+}
+
+// Simulated physical layer
+void physicalLayer(int packet) {
+    sleep(1);
+    printf("Packet %d sent\n", packet);
+}
+
+void printDivider() {
+    printf("---------------------------\n");
+}
+
+int main() {
+    int totalPackets = 5;
+    int windowSize = 1;
+    int base = 0;
+    int nextSeqNum = 0;
+    bool ackReceived = true;
+
+    srand(time(NULL));
+
+    while (base < totalPackets) {
+        if (nextSeqNum < base + windowSize && ackReceived) {
+            physicalLayer(nextSeqNum);
+            printDivider();
+            nextSeqNum++;
+            ackReceived = false;
+        }
+
+        if (!ackReceived) {
+            // Wait for acknowledgement with a timeout
+            int timer = 0;
+            while (timer < TIMEOUT) {
+                if (networkLayer(nextSeqNum)) {
+                    printf("ACK %d received\n", nextSeqNum);
+                    base = nextSeqNum;
+                    ackReceived = true;
+                    break;
+                }
+                sleep(1);
+                timer++;
+            }
+
+            if (timer == TIMEOUT) {
+                printf("Timeout occurred for packet %d\n", nextSeqNum);
+                nextSeqNum = base;
+            }
+        }
+    }
+
+    printf("All packets transmitted successfully!\n");
+
+    return 0;
+}
